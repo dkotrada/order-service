@@ -8,7 +8,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
 
-@Table("order")
+@Table("orders")
 public record Order(
         @Id
         Long id,
