@@ -3,6 +3,7 @@ package com.polarbookshop.orderservice.domain;
 import com.polarbookshop.orderservice.book.Book;
 import com.polarbookshop.orderservice.book.BookClient;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -29,9 +30,13 @@ public class OrderService {
                 .defaultIfEmpty(buildRejectedOrder(isbn, quantity))
                 .flatMap(orderRepository::save)
                 .timeout(Duration.ofSeconds(3), Mono.empty())
+                .onErrorResume(WebClientResponseException.NotFound.class,
+                        exception -> Mono.empty())
                 .retryWhen(
                         Retry.backoff(3, Duration.ofMillis(100))
-                ); // todo externalize to config
+                )
+                .onErrorResume(Exception.class,
+                        exception -> Mono.empty());
     }
 
     public static Order buildAcceptedOrder(Book book, int quantity) {
