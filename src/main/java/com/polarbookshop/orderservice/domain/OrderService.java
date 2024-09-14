@@ -5,6 +5,9 @@ import com.polarbookshop.orderservice.book.BookClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
 
 @Service
 public class OrderService {
@@ -24,7 +27,11 @@ public class OrderService {
         return bookClient.getBookByIsbn(isbn)
                 .map(book -> buildAcceptedOrder(book, quantity))
                 .defaultIfEmpty(buildRejectedOrder(isbn, quantity))
-                .flatMap(orderRepository::save);
+                .flatMap(orderRepository::save)
+                .timeout(Duration.ofSeconds(3), Mono.empty())
+                .retryWhen(
+                        Retry.backoff(3, Duration.ofMillis(100))
+                ); // todo externalize to config
     }
 
     public static Order buildAcceptedOrder(Book book, int quantity) {
